@@ -2,12 +2,7 @@
 name: Deploy Infrastructure
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 env:
   TF_ROOT: terraform
