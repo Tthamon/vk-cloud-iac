@@ -38,6 +38,14 @@ output "private_subnet_id" {
   value = vkcs_networking_subnet.private.id
 }
 
+output "database_subnet_id" {
+  value = vkcs_networking_subnet.database.id
+}
+
+output "bastion_ip" {
+  value = vkcs_networking_floatingip.bastion.address
+}
+
 output "load_balancer_ip" {
   value = vkcs_networking_floatingip.fip.address
 }

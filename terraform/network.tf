@@ -18,6 +18,13 @@ resource "vkcs_networking_subnet" "private" {
   cidr       = "192.168.2.0/24"
 }
 
+# Подсеть для БД
+resource "vkcs_networking_subnet" "database" {
+  name       = "${var.project_name}-database-subnet"
+  network_id = vkcs_networking_network.main.id
+  cidr       = "192.168.3.0/24"
+}
+
 # Data source для поиска внешней сети в VK Cloud
 data "vkcs_networking_network" "external" {
   name = "internet"
@@ -42,4 +49,9 @@ resource "vkcs_networking_router_interface" "public" {
 resource "vkcs_networking_router_interface" "private" {
   router_id = vkcs_networking_router.router.id
   subnet_id = vkcs_networking_subnet.private.id
+}
+
+resource "vkcs_networking_router_interface" "database" {
+  router_id = vkcs_networking_router.router.id
+  subnet_id = vkcs_networking_subnet.database.id
 }

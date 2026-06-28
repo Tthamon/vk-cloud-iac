@@ -18,10 +18,10 @@ resource "vkcs_db_instance" "postgres" {
 
   network {
     uuid      = vkcs_networking_network.main.id
-    subnet_id = vkcs_networking_subnet.private.id
+    subnet_id = vkcs_networking_subnet.database.id
   }
 
-  depends_on = [vkcs_networking_router_interface.private]
+  depends_on = [vkcs_networking_router_interface.database]
 }
 
 # Создаем базу данных внутри инстанса

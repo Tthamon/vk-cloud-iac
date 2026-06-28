@@ -90,3 +90,15 @@ variable "image_name" {
   description = "Base name of Packer image"
   type        = string
 }
+
+variable "nodexp_port" {
+  description = "Base name of Packer image"
+  type        = number
+  default     = 9100
+}
+
+variable "postgres_port" {
+  description = "Base name of Packer image"
+  type        = number
+  default     = 5432
+}
