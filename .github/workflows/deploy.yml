@@ -137,9 +137,9 @@ jobs:
         id: check_image
         run: |
           EXISTING_IMAGE=$(openstack image list \
-            --name "${{ env.IMAGE_NAME }}" \
+            --name "$IMAGE_NAME" \
             --format value -c Name \
-            2>/dev/null | head -1 || echo "")
+            2>/dev/null | grep -x "$IMAGE_NAME" | head -1 || echo "")
 
           if [ -n "$EXISTING_IMAGE" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
