@@ -64,7 +64,7 @@ resource "vkcs_networking_secgroup_rule" "db_postgres" {
   protocol          = "tcp"
   port_range_min    = var.postgres_port
   port_range_max    = var.postgres_port
-  remote_ip_prefix  = "192.168.2.0/24"  # только с веб-серверов
+  remote_ip_prefix  = "192.168.2.0/24" # только с веб-серверов
   security_group_id = vkcs_networking_secgroup.database.id
 }
 
@@ -73,7 +73,7 @@ resource "vkcs_networking_secgroup_rule" "db_ssh" {
   protocol          = "tcp"
   port_range_min    = var.ssh_port
   port_range_max    = var.ssh_port
-  remote_ip_prefix  = "192.168.1.0/24"  # только с bastion
+  remote_ip_prefix  = "192.168.1.0/24" # только с bastion
   security_group_id = vkcs_networking_secgroup.database.id
 }
 
