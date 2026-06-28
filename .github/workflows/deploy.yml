@@ -136,15 +136,13 @@ jobs:
       - name: Check existing image
         id: check_image
         run: |
-          IMAGE_NAME="${{ env.IMAGE_NAME }}"
           EXISTING_IMAGE=$(openstack image list \
-            --name "$IMAGE_NAME" \
+            --name "${{ env.IMAGE_NAME }}" \
             --format value -c Name \
-            --limit 1 2>/dev/null || echo "")
+            2>/dev/null | head -1 || echo "")
 
           if [ -n "$EXISTING_IMAGE" ]; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "image_name=$EXISTING_IMAGE" >> $GITHUB_OUTPUT
             echo "Образ уже существует: $EXISTING_IMAGE"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
