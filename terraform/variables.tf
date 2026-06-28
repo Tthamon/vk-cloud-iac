@@ -85,3 +85,8 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "image_name" {
+  description = "Base name of Packer image"
+  type        = string
+}

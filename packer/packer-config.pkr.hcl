@@ -21,7 +21,7 @@ source "openstack" "ubuntu-nginx" {
   networks = [var.network_id]
   security_groups   = ["default", "packer-ssh"]  
   ssh_username = "ubuntu"  
-  image_name = "${var.image_name}-${formatdate("YYYY-MM-DD", timestamp())}"
+  image_name = "${var.image_name}"
     
   volume_type = "ceph-ssd"
   volume_size = 10
@@ -57,12 +57,6 @@ build {
       "sudo apt-get clean",
       "sudo rm -rf /tmp/*",
       "sudo rm -rf /var/lib/apt/lists/*"
-    ]
-  }
-
-  post-processor "shell-local" {
-    inline = [
-      "echo '${var.image_name}-${formatdate("YYYY-MM-DD", timestamp())}' > image_name.txt"
     ]
   }
 }

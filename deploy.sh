@@ -24,6 +24,7 @@ required_vars=(
     "PROJECT_NAME"
     "MY_IP"
     "BUCKET_NAME"
+    "IMAGE_NAME"
     "S3_ACCESS_KEY"
     "S3_SECRET_KEY"
     "OS_USERNAME"
@@ -105,17 +106,22 @@ echo "=== Проверка образа Packer ==="
 
 cd ../packer
 
-if [ -f "image_name.txt" ] && [ -s "image_name.txt" ]; then
-    echo "Образ уже существует: $(cat image_name.txt)"
+# Проверяем существует ли образ с таким именем в VK Cloud
+EXISTING_IMAGE=$(openstack image list \
+    --name "$IMAGE_NAME" \
+    --format value -c Name \
+    | grep "^$IMAGE_NAME" | tail -1 || echo "")
+
+if [ -n "$EXISTING_IMAGE" ]; then
+    echo "Образ уже существует: $EXISTING_IMAGE"
+
+    # Передаём полное имя образа в Terraform
+    export TF_VAR_image_name="$EXISTING_IMAGE"
 else
     echo "Сборка образа"
 
     packer init .
-
-    if ! packer validate .; then
-        echo "Ошибка валидации Packer"
-        exit 1
-    fi
+    PKR_VAR_network_id="placeholder" packer validate .
     echo "Packer конфиг валиден"
 
     # Создание временной инфраструктуры для Packer
@@ -162,7 +168,7 @@ else
 
     # Сборка образа
     if packer build .; then
-        echo "Образ собран: $(cat image_name.txt)"
+        echo "Образ собран"
         BUILD_SUCCESS=true
     else
         echo "Ошибка сборки образа"
@@ -191,12 +197,6 @@ else
         exit 1
     fi
 
-    if [ -f "image_name.txt" ] && [ -s "image_name.txt" ]; then
-        echo "Образ создан: $(cat image_name.txt)"
-    else
-        echo "image_name.txt не найден"
-        exit 1
-    fi
 fi
 
 

@@ -55,15 +55,16 @@ echo "Инфраструктура удалена"
 echo ""
 echo "=== Шаг 5: Удаление образа Packer ==="
 cd ..
-IMAGE_NAME=$(cat packer/image_name.txt 2>/dev/null || echo "")
+IMAGE_ID=$(openstack image list \
+    --name "$IMAGE_NAME" \
+    --format value -c ID \
+    | head -1 || echo "")
 
-if [ -n "$IMAGE_NAME" ]; then
-    IMAGE_ID=$(openstack image list --name "$IMAGE_NAME" --format value -c ID)
-    if [ -n "$IMAGE_ID" ]; then
-        openstack image delete "$IMAGE_ID"
-        echo "Образ $IMAGE_NAME удалён"
-    fi
-    rm -f packer/image_name.txt
+if [ -n "$IMAGE_ID" ]; then
+    openstack image delete "$IMAGE_ID"
+    echo "Образ удалён"
+else
+    echo "Образ не найден"
 fi
 
 echo ""

@@ -28,14 +28,9 @@ resource "vkcs_networking_secgroup_rule" "web_http" {
   security_group_id = vkcs_networking_secgroup.web.id
 }
 
-# Получение имени созданного через Packer образа
-data "local_file" "image_name" {
-  filename = "${path.module}/../packer/image_name.txt"
-}
-
 # Поиск созданного образа
 data "vkcs_images_image" "custom" {
-  name        = trimspace(data.local_file.image_name.content)
+  name        = var.image_name
   most_recent = true
 }
 
