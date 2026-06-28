@@ -1,0 +1,266 @@
+# .github/workflows/deploy.yml
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  TF_ROOT: terraform
+  PACKER_ROOT: packer
+
+  BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+  S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+  S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+  OS_USERNAME: ${{ secrets.OS_USERNAME }}
+  OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+  OS_PROJECT_ID: ${{ secrets.OS_PROJECT_ID }}
+  OS_AUTH_URL: "https://msk.cloud.vk.com/infra/identity/v3/"
+  OS_USER_DOMAIN_NAME: "users"
+  OS_REGION_NAME: "RegionOne"
+  PKR_VAR_os_username: ${{ secrets.OS_USERNAME }}
+  PKR_VAR_os_password: ${{ secrets.OS_PASSWORD }}
+  PKR_VAR_os_project_id: ${{ secrets.OS_PROJECT_ID }}
+  PKR_VAR_os_auth_url: "https://msk.cloud.vk.com/infra/identity/v3/"
+  TF_VAR_project_name: ${{ secrets.PROJECT_NAME }}
+  TF_VAR_my_ip: ${{ secrets.MY_IP }}
+  TF_VAR_bucket_name: ${{ secrets.BUCKET_NAME }}
+  TF_VAR_s3_access_key: ${{ secrets.S3_ACCESS_KEY }}
+  TF_VAR_s3_secret_key: ${{ secrets.S3_SECRET_KEY }}
+  TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+  TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+
+jobs:
+  # Валидация Terraform
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: |
+          cd $TF_ROOT
+          terraform fmt -check -recursive
+
+      - name: Terraform Init (no backend)
+        run: |
+          cd $TF_ROOT
+          terraform init -backend=false -input=false
+
+      - name: Terraform Validate
+        run: |
+          cd $TF_ROOT
+          terraform validate
+
+  # Создание S3 бакета
+  create_bucket:
+    name: Create S3 Bucket
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Install AWS CLI
+        run: pip install awscli
+
+      - name: Check and Create Bucket
+        run: |
+          cd $TF_ROOT
+
+          BUCKET_EXISTS=$(AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY \
+            AWS_SECRET_ACCESS_KEY=$S3_SECRET_KEY \
+            aws s3api head-bucket \
+            --bucket "$BUCKET_NAME" \
+            --endpoint-url "https://hb.ru-msk.vkcloud-storage.ru" \
+            2>&1 && echo "yes" || echo "no")
+
+          if [ "$BUCKET_EXISTS" = "yes" ]; then
+            echo "Бакет $BUCKET_NAME существует"
+            terraform init -reconfigure \
+              -backend-config="bucket=$BUCKET_NAME" \
+              -backend-config="access_key=$S3_ACCESS_KEY" \
+              -backend-config="secret_key=$S3_SECRET_KEY" \
+              -input=false
+          else
+            echo "Создание бакета..."
+            cat > backend_override.tf << 'EOF'
+          terraform {
+            backend "local" {
+              path = "/tmp/terraform_init.tfstate"
+            }
+          }
+          EOF
+            terraform init -reconfigure -input=false
+            terraform apply -auto-approve \
+              -target=aws_s3_bucket.terraform_state \
+              -target=aws_s3_bucket_versioning.terraform_state
+            rm backend_override.tf
+            echo "Бакет $BUCKET_NAME создан"
+            terraform init \
+              -migrate-state \
+              -force-copy \
+              -backend-config="bucket=$BUCKET_NAME" \
+              -backend-config="access_key=$S3_ACCESS_KEY" \
+              -backend-config="secret_key=$S3_SECRET_KEY"
+            echo "State перенесён в S3"
+          fi
+
+  # Сборка образа Packer
+  build_image:
+    name: Build Packer Image
+    runs-on: ubuntu-latest
+    needs: create_bucket
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@v3
+
+      - name: Install OpenStack CLI
+        run: pip install python-openstackclient
+
+      - name: Check existing image
+        id: check_image
+        run: |
+          if [ -f "$PACKER_ROOT/image_name.txt" ] && \
+             [ -s "$PACKER_ROOT/image_name.txt" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Образ существует: $(cat $PACKER_ROOT/image_name.txt)"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Образ не найден, нужна сборка"
+          fi
+
+      - name: Packer Init and Validate
+        if: steps.check_image.outputs.exists == 'false'
+        run: |
+          cd $PACKER_ROOT
+          packer init .
+          PKR_VAR_network_id="placeholder" packer validate .
+          echo "Packer конфиг валиден"
+
+      - name: Create Packer Network
+        if: steps.check_image.outputs.exists == 'false'
+        id: packer_network
+        run: |
+          PACKER_NETWORK_ID=$(openstack network create packer-network \
+            --format value -c id)
+          echo "network_id=$PACKER_NETWORK_ID" >> $GITHUB_OUTPUT
+          echo "Сеть создана: $PACKER_NETWORK_ID"
+
+          openstack subnet create packer-subnet \
+            --network "$PACKER_NETWORK_ID" \
+            --subnet-range 10.0.0.0/24
+          echo "Подсеть создана"
+
+          openstack router create packer-router
+          openstack router set packer-router \
+            --external-gateway ec8c610e-6387-447e-83d2-d2c541e88164
+          openstack router add subnet packer-router packer-subnet
+          echo "Роутер настроен"
+
+          if openstack security group show packer-ssh > /dev/null 2>&1; then
+            echo "SG packer-ssh уже существует"
+          else
+            openstack security group create packer-ssh \
+              --description "SG for Packer SSH access"
+            openstack security group rule create packer-ssh \
+              --protocol tcp \
+              --dst-port 22 \
+              --remote-ip 0.0.0.0/0 \
+              --ingress
+            echo "SG packer-ssh создана"
+          fi
+
+      - name: Build Packer Image
+        if: steps.check_image.outputs.exists == 'false'
+        run: |
+          cd $PACKER_ROOT
+          export PKR_VAR_network_id="${{ steps.packer_network.outputs.network_id }}"
+          packer build .
+          echo "Образ собран: $(cat image_name.txt)"
+
+      - name: Cleanup Packer Infrastructure
+        if: steps.check_image.outputs.exists == 'false'
+        run: |
+          openstack security group delete packer-ssh || true
+          openstack router remove subnet packer-router packer-subnet || true
+          openstack router unset packer-router --external-gateway || true
+          openstack router delete packer-router || true
+          openstack subnet delete packer-subnet || true
+          openstack network delete packer-network || true
+          echo "Временная инфраструктура удалена"
+
+      - name: Upload image_name.txt
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-name
+          path: ${{ env.PACKER_ROOT }}/image_name.txt
+          retention-days: 1
+
+  # Развертывание
+  deploy:
+    name: Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: build_image
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Download image_name.txt
+        uses: actions/download-artifact@v4
+        with:
+          name: image-name
+          path: ${{ env.PACKER_ROOT }}
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PUBLIC_KEY }}" > ~/.ssh/vk-cloud-key.pub
+          chmod 600 ~/.ssh/vk-cloud-key.pub
+
+      - name: Terraform Init
+        run: |
+          cd $TF_ROOT
+          terraform init \
+            -reconfigure \
+            -backend-config="bucket=$BUCKET_NAME" \
+            -backend-config="access_key=$S3_ACCESS_KEY" \
+            -backend-config="secret_key=$S3_SECRET_KEY" \
+            -input=false
+
+      - name: Terraform Plan
+        run: |
+          cd $TF_ROOT
+          terraform plan -out=plan.tfplan
+
+      - name: Terraform Apply
+        run: |
+          cd $TF_ROOT
+          terraform apply -auto-approve plan.tfplan
+
+      - name: Show Outputs
+        run: |
+          cd $TF_ROOT
+          terraform output
