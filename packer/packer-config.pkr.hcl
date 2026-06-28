@@ -30,6 +30,7 @@ source "openstack" "ubuntu-nginx" {
   availability_zone = "MS1"
 
   use_floating_ip = true
+  reuse_ips = true
   floating_ip_network = "ec8c610e-6387-447e-83d2-d2c541e88164"
 }
 
