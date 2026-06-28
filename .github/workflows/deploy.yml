@@ -8,7 +8,7 @@ env:
   TF_ROOT: terraform
   PACKER_ROOT: packer
 
-  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
   BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
   S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
   S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
