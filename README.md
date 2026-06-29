@@ -63,14 +63,14 @@ nano .env  # заполните своими значениями
 
 ```bash
 chmod +x deploy.sh
-./deploy.sh
+./scripts/deploy.sh
 ```
 
 **5. Удаление инфраструктуры**
 
 ```bash
 chmod +x destroy.sh
-./destroy.sh
+./scripts/destroy.sh
 ```
 
 ### Запуск через GitHub Actions

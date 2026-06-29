@@ -31,3 +31,7 @@ provider "aws" {
     s3 = "https://hb.ru-msk.vkcloud-storage.ru"
   }
 }
+
+provider "vkcs" {
+  # Переменные окружения будут использованы автоматически
+}

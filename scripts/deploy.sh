@@ -1,18 +1,31 @@
 #!/bin/bash
 set -e
 
+# Корневая директория проекта
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Загрузка переменных из корня проекта
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
+    echo "Переменные загружены из .env"
+else
+    echo "Файл .env не найден"
+    exit 1
+fi
+
 # Проверка наличия инструментов
 for cmd in terraform packer aws openstack; do
     if ! command -v $cmd &> /dev/null; then
-        echo "❌ $cmd не установлен"
+        echo "$cmd не установлен"
         exit 1
     fi
 done
 echo "Все инструменты установлены"
 
-# Загрузка переменных
-if [ -f .env ]; then
-    source .env
+# Загрузка переменных из корня проекта
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
     echo "Переменные загружены из .env"
 else
     echo "Файл .env не найден"
@@ -45,7 +58,7 @@ done
 echo "Все переменные заданы"
 
 
-cd terraform
+cd "$PROJECT_ROOT/terraform"
 
 echo ""
 echo "=== Проверка S3 бакета ==="
@@ -104,7 +117,7 @@ fi
 echo ""
 echo "=== Проверка образа Packer ==="
 
-cd ../packer
+cd "$PROJECT_ROOT/packer"
 
 # Проверяем существует ли образ с таким именем в VK Cloud
 EXISTING_IMAGE=$(openstack image list \
@@ -203,7 +216,7 @@ fi
 echo ""
 echo "=== Валидация Terraform ==="
 
-cd ../terraform
+cd "$PROJECT_ROOT/terraform"
 
 if terraform fmt -check -recursive; then
     echo "Форматирование корректно"

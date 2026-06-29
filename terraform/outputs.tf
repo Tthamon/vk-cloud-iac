@@ -1,51 +1,47 @@
 output "vm_ip" {
-  value = vkcs_compute_instance.web[*].access_ip_v4
+  value = module.compute.web_instance_ips
 }
 
 output "vm_name" {
-  value = vkcs_compute_instance.web[*].name
+  value = module.compute.web_instance_names
 }
 
 output "web_servers_ips" {
-  value = vkcs_compute_instance.web[*].access_ip_v4
+  value = module.compute.web_instance_ips
 }
 
 output "db_name" {
-  value = vkcs_db_database.my_database.name
+  value = module.database.db_name
 }
 
 output "db_host" {
-  value = data.vkcs_db_instance.postgres.hostname
+  value = module.database.db_host
 }
 
 output "db_port" {
-  value = 5432
-}
-
-output "bucket_name" {
-  value = aws_s3_bucket.terraform_state.bucket
+  value = module.database.db_port
 }
 
 output "network_id" {
-  value = vkcs_networking_network.main.id
+  value = module.network.network_id
 }
 
 output "public_subnet_id" {
-  value = vkcs_networking_subnet.public.id
+  value = module.network.public_subnet_id
 }
 
 output "private_subnet_id" {
-  value = vkcs_networking_subnet.private.id
+  value = module.network.private_web_subnet_id
 }
 
 output "database_subnet_id" {
-  value = vkcs_networking_subnet.database.id
+  value = module.network.database_subnet_id
 }
 
 output "bastion_ip" {
-  value = vkcs_networking_floatingip.bastion.address
+  value = module.compute.bastion_floating_ip
 }
 
 output "load_balancer_ip" {
-  value = vkcs_networking_floatingip.fip.address
+  value = module.loadbalancer.load_balancer_ip
 }

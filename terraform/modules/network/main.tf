@@ -1,41 +1,48 @@
+terraform {
+  required_providers {
+    vkcs = {
+      source  = "vk-cs/vkcs"
+      version = "~> 0.6.1"
+    }
+  }
+}
+
 # Создание сети
 resource "vkcs_networking_network" "main" {
-  name           = "${var.project_name}-vpc"
+  name           = var.network_name
   admin_state_up = true
 }
 
 # Создание публичной подсети
 resource "vkcs_networking_subnet" "public" {
-  name       = "${var.project_name}-public-subnet"
+  name       = "${var.network_name}-public-subnet"
   network_id = vkcs_networking_network.main.id
-  cidr       = "192.168.1.0/24"
+  cidr       = var.public_subnet_cidr
 }
 
-# Создание приватной подсети
-resource "vkcs_networking_subnet" "private" {
-  name       = "${var.project_name}-private-subnet"
+# Создание приватной подсети (веб)
+resource "vkcs_networking_subnet" "private_web" {
+  name       = "${var.network_name}-private-web-subnet"
   network_id = vkcs_networking_network.main.id
-  cidr       = "192.168.2.0/24"
+  cidr       = var.private_web_subnet_cidr
 }
 
 # Подсеть для БД
 resource "vkcs_networking_subnet" "database" {
-  name       = "${var.project_name}-database-subnet"
+  name       = "${var.network_name}-database-subnet"
   network_id = vkcs_networking_network.main.id
-  cidr       = "192.168.3.0/24"
+  cidr       = var.database_subnet_cidr
 }
 
 # Data source для поиска внешней сети в VK Cloud
 data "vkcs_networking_network" "external" {
-  name = "internet"
+  name = var.external_network_name
 }
 
 # Создание роутера для доступа в интернет
 resource "vkcs_networking_router" "router" {
-  name           = "${var.project_name}-router"
-  admin_state_up = true
-
-  # Внешняя сеть (предоставляется провайдером)
+  name                = "${var.network_name}-router"
+  admin_state_up      = true
   external_network_id = data.vkcs_networking_network.external.id
 }
 
@@ -46,11 +53,12 @@ resource "vkcs_networking_router_interface" "public" {
 }
 
 # Подключение приватной подсети к роутеру
-resource "vkcs_networking_router_interface" "private" {
+resource "vkcs_networking_router_interface" "private_web" {
   router_id = vkcs_networking_router.router.id
-  subnet_id = vkcs_networking_subnet.private.id
+  subnet_id = vkcs_networking_subnet.private_web.id
 }
 
+# Подключение подсети БД к роутеру
 resource "vkcs_networking_router_interface" "database" {
   router_id = vkcs_networking_router.router.id
   subnet_id = vkcs_networking_subnet.database.id

@@ -1,12 +1,15 @@
 #!/bin/bash
 set -e
 
-if [ -f .env ]; then
-    source .env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    source "$PROJECT_ROOT/.env"
 fi
 
 echo "=== Шаг 1: Получение state из S3 ==="
-cd terraform
+cd "$PROJECT_ROOT/terraform"
 
 # Инициализируем с S3 backend
 terraform init \
@@ -54,7 +57,7 @@ echo "Инфраструктура удалена"
 
 echo ""
 echo "=== Шаг 5: Удаление образа Packer ==="
-cd ..
+cd "$PROJECT_ROOT"
 IMAGE_ID=$(openstack image list \
     --name "$IMAGE_NAME" \
     --format value -c ID \
@@ -69,7 +72,7 @@ fi
 
 echo ""
 echo "=== Шаг 6: Очистка локальных файлов ==="
-cd terraform
+cd "$PROJECT_ROOT/terraform"
 rm -rf .terraform/
 rm -f .terraform.lock.hcl plan.tfplan backend_override.tf
 rm -f local.tfstate local.tfstate.backup
@@ -78,4 +81,3 @@ mv backend.tf.bak backend.tf
 
 echo ""
 echo "=== Готово! ==="
-echo "Запустите ./deploy.sh для нового развертывания"
