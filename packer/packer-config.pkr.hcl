@@ -42,6 +42,12 @@ build {
     inline = [
       "echo 'Updating system...'",
       "sudo apt-get update",
+      "sudo apt-get upgrade -y",
+      "sudo apt-get install -f -y",
+      "sudo dpkg --configure -a",
+      "sudo apt-get install -y software-properties-common",
+      "sudo add-apt-repository -y ppa:ondrej/php",
+      "sudo apt-get update",
       
       "echo 'Installing nginx and PHP...'",
       "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx php8.1-fpm",
