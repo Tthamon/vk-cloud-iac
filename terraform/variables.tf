@@ -102,3 +102,39 @@ variable "postgres_port" {
   type        = number
   default     = 5432
 }
+
+variable "public_cidr" {
+  description = "Public subnet cidr"
+  type        = string
+  default     = "192.168.1.0/24"
+}
+
+variable "private_cidr" {
+  description = "Private subnet cidr"
+  type        = string
+  default     = "192.168.2.0/24"
+}
+
+variable "database_cidr" {
+  description = "Database subnet cidr"
+  type        = string
+  default     = "192.168.3.0/24"
+}
+
+variable "web_flavor" {
+  description = "Web flavor name"
+  type        = string
+  default     = "Basic-1-1-10"
+}
+
+variable "db_flavor" {
+  description = "Database flavor name"
+  type        = string
+  default     = "STD2-2-8"
+}
+
+variable "postgre_version" {
+  description = "PostgreSQL version"
+  type        = string
+  default     = "15"
+}
