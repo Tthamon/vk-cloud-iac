@@ -27,7 +27,7 @@
 - OpenStack CLI
 - Unix OS/WSL 
 
-### Локальный запуск
+### Локальный запуск через bash-скрипт
 
 **1. Установите инструменты**
 
@@ -62,14 +62,14 @@ nano .env  # заполните своими значениями
 **4. Запустите развертывание**
 
 ```bash
-chmod +x deploy.sh
+chmod +x ./scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
 **5. Удаление инфраструктуры**
 
 ```bash
-chmod +x destroy.sh
+chmod +x ./scripts/destroy.sh
 ./scripts/destroy.sh
 ```
 
