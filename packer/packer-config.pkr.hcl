@@ -40,19 +40,9 @@ build {
   # Провизоры (provisioners) — команды для настройки
   provisioner "shell" {
     inline = [
-      "echo 'Updating system...'",
       "sudo apt-get update",
-      "sudo apt-get install -f -y",
-      "sudo dpkg --configure -a",
-      "sudo apt-get install -y software-properties-common",
-      "sudo add-apt-repository -y ppa:ondrej/php",
-      "sudo apt-get update",
-      
-      "echo 'Installing nginx and PHP...'",
-      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx php8.1-fpm",
-      
-      "echo 'Configuring nginx and PHP...'",
-      "sudo systemctl enable nginx php8.1-fpm",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx",
+      "sudo systemctl enable nginx",
       
       "echo 'Creating test page...'",
       "echo '<h1>Hello from Packer!</h1>' | sudo tee /var/www/html/index.html",
