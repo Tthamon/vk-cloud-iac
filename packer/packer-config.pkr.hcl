@@ -42,7 +42,6 @@ build {
     inline = [
       "echo 'Updating system...'",
       "sudo apt-get update",
-      "sudo apt-get upgrade -y",
       "sudo apt-get install -f -y",
       "sudo dpkg --configure -a",
       "sudo apt-get install -y software-properties-common",
@@ -54,7 +53,6 @@ build {
       
       "echo 'Configuring nginx and PHP...'",
       "sudo systemctl enable nginx php8.1-fpm",
-      "sudo systemctl start nginx php8.1-fpm",
       
       "echo 'Creating test page...'",
       "echo '<h1>Hello from Packer!</h1>' | sudo tee /var/www/html/index.html",
